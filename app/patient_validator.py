@@ -2,7 +2,7 @@ import requests
 import logging
 
 # The base URL for the patient management service should reflect your Docker network alias or DNS name.
-PATIENT_MANAGEMENT_URL = "http://patient-management-service:8082/api/patients"
+PATIENT_MANAGEMENT_URL = "http://patient-management-service:8080/api/patients"
 def get_patient_details(patient_id: str) -> dict:
     """
     Calls the patient management service to retrieve patient details.
