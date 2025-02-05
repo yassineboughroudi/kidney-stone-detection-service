@@ -30,10 +30,31 @@ def dummy_publish_event(event: dict):
 
 @pytest.fixture(autouse=True)
 def override_dependencies(monkeypatch):
-    # Override the external patient service call and event publisher so that
-    # the test does not depend on external systems.
+    # Mock the Consul registration
+    def mock_register_service_with_consul():
+        return
+    monkeypatch.setattr("app.main.register_service_with_consul", mock_register_service_with_consul)
+
+    # Mock the MongoDB collection insert
+    class MockCollection:
+        def insert_one(self, data):
+            return {"_id": "mock_id"}
+
+    class MockDBClient:
+        def __getitem__(self, name):
+            return MockCollection()
+
+    def mock_mongo_client(uri):
+        return MockDBClient()
+
+    monkeypatch.setattr("pymongo.MongoClient", mock_mongo_client)
+
+    # Mock the external patient service call
     monkeypatch.setattr("app.get_patient_details", dummy_get_patient_details)
+
+    # Mock the RabbitMQ event publisher
     monkeypatch.setattr("app.publish_event", dummy_publish_event)
+
 
 def test_predict_endpoint_valid_image(client, monkeypatch):
     # Create a dummy image file to upload.

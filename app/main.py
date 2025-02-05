@@ -72,44 +72,23 @@ class PredictionResponse(BaseModel):
 
 @app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
 async def predict_kidney_stone(file: UploadFile = File(...), patient_id: Optional[str] = None):
-    """
-    Process CT scan for kidney stone detection.
-    If patient_id is provided, validate and enrich with patient info.
-    """
     try:
         # Validate file type
         if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
             raise HTTPException(status_code=400, detail="Only JPEG and PNG files supported.")
 
-        # Validate the patient if a patient_id is provided
-        patient_info = None
-        if patient_id:
-            patient_info = get_patient_details(patient_id)
-            if patient_info is None:
-                raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found.")
-
         # Read image file and perform prediction
         image_bytes = file.file.read()
         prediction_result = predict(model, image_bytes)
 
-        # Save prediction in MongoDB along with the patient_id
-        prediction_data = {
-            "patient_id": patient_id,
-            "service": SERVICE_NAME,
-            "prediction": prediction_result,
-        }
+        # Save prediction in MongoDB
+        prediction_data = {"patient_id": patient_id, "service": SERVICE_NAME, "prediction": prediction_result}
         result = predictions_collection.insert_one(prediction_data)
-        prediction_data["_id"] = str(result.inserted_id)
-        logging.info(f"Stored prediction: {prediction_data}")
 
-        # Publish event via RabbitMQ
-        publish_event(prediction_data)
-
-        # Return enriched prediction response including any patient info retrieved
-        return {
-            **prediction_data,
-            "patient_info": patient_info,
-        }
+        # Return the prediction result
+        return {"_id": str(result.inserted_id), **prediction_data}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logging.error(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
