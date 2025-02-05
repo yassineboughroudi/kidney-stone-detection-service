@@ -1,26 +1,29 @@
-FROM python:3.10-slim
+FROM --platform=linux/arm64 python:3.11-slim-bookworm
 
-# 1) Set a working directory
-WORKDIR /app
-
-# 2) Install system build dependencies if needed (e.g., for wheels)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc libffi-dev \
+RUN apt-get update && apt-get install -y \
+    libjpeg-dev \
+    zlib1g-dev \
+    g++ \
+    gfortran \
+    libopenblas-dev \
+    liblapack-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 3) Create a virtual environment
-RUN python -m venv /app/venv
-ENV PATH="/app/venv/bin:$PATH"
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    THINC_BACKEND=numpy \
+    BLIS_ARCH=generic
 
-# 4) Copy requirements and install
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir numpy==1.26.4 && \
+    pip install --no-cache-dir python-multipart==0.0.7 && \
+    pip install --no-cache-dir -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    --no-binary blis,thinc  # Force source build with our arch settings
 
-# 5) Copy the rest of your Python code
-COPY . /app
+COPY . .
 
-# 6) Expose the FastAPI port
 EXPOSE 8000
-
-# 7) Run uvicorn from the venv
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
