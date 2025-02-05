@@ -28,6 +28,12 @@ def dummy_publish_event(event: dict):
     # Dummy function to override the actual RabbitMQ publisher
     pass
 
+import pytest
+from unittest.mock import MagicMock
+from pymongo.collection import Collection
+from pymongo.database import Database
+from pymongo import MongoClient
+
 @pytest.fixture(autouse=True)
 def override_dependencies(monkeypatch):
     # Mock the Consul registration to prevent errors during testing
@@ -44,6 +50,19 @@ def override_dependencies(monkeypatch):
     def dummy_publish_event(event: dict):
         return
     monkeypatch.setattr("app.publish_event", dummy_publish_event)
+
+    # Mock MongoDB Connection **BEFORE APP INITIALIZATION**
+    mock_collection = MagicMock(spec=Collection)
+    mock_collection.insert_one.return_value = {"_id": "mock_id"}
+
+    mock_db = MagicMock(spec=Database)
+    mock_db.__getitem__.return_value = mock_collection
+
+    mock_client = MagicMock(spec=MongoClient)
+    mock_client.__getitem__.return_value = mock_db
+
+    monkeypatch.setattr("app.main.MongoClient", lambda *args, **kwargs: mock_client)
+
 
     # Mock the MongoDB collection and client
     class MockCollection:
