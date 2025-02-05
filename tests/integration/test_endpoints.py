@@ -30,12 +30,22 @@ def dummy_publish_event(event: dict):
 
 @pytest.fixture(autouse=True)
 def override_dependencies(monkeypatch):
-    # Mock the Consul registration
+    # Mock the Consul registration to prevent errors during testing
     def mock_register_service_with_consul():
         return
     monkeypatch.setattr("app.main.register_service_with_consul", mock_register_service_with_consul)
 
-    # Mock the MongoDB collection insert
+    # Mock the external patient service call
+    def dummy_get_patient_details(patient_id: str):
+        return {"id": patient_id, "name": "John Doe"}
+    monkeypatch.setattr("app.get_patient_details", dummy_get_patient_details)
+
+    # Mock the RabbitMQ event publisher
+    def dummy_publish_event(event: dict):
+        return
+    monkeypatch.setattr("app.publish_event", dummy_publish_event)
+
+    # Mock the MongoDB collection
     class MockCollection:
         def insert_one(self, data):
             return {"_id": "mock_id"}
@@ -48,12 +58,6 @@ def override_dependencies(monkeypatch):
         return MockDBClient()
 
     monkeypatch.setattr("pymongo.MongoClient", mock_mongo_client)
-
-    # Mock the external patient service call
-    monkeypatch.setattr("app.get_patient_details", dummy_get_patient_details)
-
-    # Mock the RabbitMQ event publisher
-    monkeypatch.setattr("app.publish_event", dummy_publish_event)
 
 
 def test_predict_endpoint_valid_image(client, monkeypatch):
