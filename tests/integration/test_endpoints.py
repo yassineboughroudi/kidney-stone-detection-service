@@ -45,19 +45,18 @@ def override_dependencies(monkeypatch):
         return
     monkeypatch.setattr("app.publish_event", dummy_publish_event)
 
-    # Mock the MongoDB collection
+    # Mock the MongoDB collection and client
     class MockCollection:
         def insert_one(self, data):
             return {"_id": "mock_id"}
 
     class MockDBClient:
+        def __init__(self, uri):
+            pass
         def __getitem__(self, name):
             return MockCollection()
 
-    def mock_mongo_client(uri):
-        return MockDBClient()
-
-    monkeypatch.setattr("pymongo.MongoClient", mock_mongo_client)
+    monkeypatch.setattr("pymongo.MongoClient", MockDBClient)
 
 
 def test_predict_endpoint_valid_image(client, monkeypatch):
