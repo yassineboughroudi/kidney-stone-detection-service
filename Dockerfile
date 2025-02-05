@@ -1,4 +1,8 @@
-FROM --platform=linux/arm64 python:3.11-slim-bookworm
+#For testing locally
+#FROM --platform=linux/arm64 python:3.11-slim-bookworm
+
+# Force AMD64 for compatibility with GitHub Actions
+FROM --platform=linux/amd64 python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
     libjpeg-dev \
