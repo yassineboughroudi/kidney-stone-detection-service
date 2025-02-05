@@ -15,5 +15,6 @@ thinc==8.2.3   # Explicit version to match spacy
 pytest==8.3.4
 pytest-cov==4.1.0  # For test coverage
 pytest-mock==3.11.1  # For mocking
+httpx==0.24.1
 
 
