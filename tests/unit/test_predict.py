@@ -1,12 +1,13 @@
 # tests/unit/test_predict.py
 import io
-from PIL import Image
-import pytest
 
 # Import the predict function from your module.
 # Adjust the import below based on your project structure.
-from app import predict
-
+# tests/unit/test_predict.py
+from app.inference import predict
+from PIL import Image
+import pytest
+from io import BytesIO
 # Create a dummy model that simulates the expected behavior.
 class DummyModel:
     def predict(self, image):
@@ -35,9 +36,7 @@ def test_predict_success():
     assert "stone" in result["probabilities"]
 
 def test_predict_failure(monkeypatch):
-    # Monkeypatch Image.open so that it raises an exception (simulating a corrupt file)
-    monkeypatch.setattr("app.predict.Image.open", lambda x: (_ for _ in ()).throw(Exception("Invalid image")))
-    dummy_model = DummyModel()
-    with pytest.raises(ValueError) as exc_info:
-        predict(dummy_model, b"not an image")
-    assert "Prediction failed" in str(exc_info.value)
+    # Monkeypatch Image.open to simulate an invalid image
+    monkeypatch.setattr("app.inference.Image.open", lambda x: (_ for _ in ()).throw(Exception("Invalid image")))
+    with pytest.raises(ValueError, match="Prediction failed"):
+        predict(None, b"not an image")

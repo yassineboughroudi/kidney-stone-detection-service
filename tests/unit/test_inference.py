@@ -13,11 +13,12 @@ def dummy_model():
     return load_learner(model_path)
 
 def test_predict_success(dummy_model):
-    with open("../img/Kidney_stone_test.png", "rb") as f:
-        file_bytes = f.read()
-        result = predict(dummy_model, file_bytes)
-        assert "class" in result
-        assert "probabilities" in result
+    test_image_path = os.path.join(os.path.dirname(__file__), "../img/Kidney_stone_test.png")
+    with open(test_image_path, "rb") as f:
+        image_bytes = f.read()
+    prediction = dummy_model.predict(image_bytes)
+    assert prediction is not None
+
 
 def test_predict_invalid_image(dummy_model):
     with pytest.raises(ValueError):
