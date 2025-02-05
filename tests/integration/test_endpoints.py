@@ -8,20 +8,20 @@ from pymongo import MongoClient
 from PIL import Image
 from fastapi.testclient import TestClient
 
-# ✅ Apply MongoDB Mock Globally Before Importing FastAPI
+# ✅ Step 1: Apply MongoDB Mock Globally Before Importing FastAPI
 mock_collection = MagicMock(spec=Collection)
-mock_collection.insert_one.return_value = {"_id": "mock_id"}
+mock_collection.insert_one.return_value = MagicMock(inserted_id="mock_id")  # Prevent real inserts
 
 mock_db = MagicMock(spec=Database)
-mock_db.__getitem__.return_value = mock_collection
+mock_db.__getitem__.return_value = mock_collection  # Mock DB collections
 
 mock_client = MagicMock(spec=MongoClient)
 mock_client.__getitem__.return_value = mock_db
 
-# ✅ Apply Mock Before FastAPI App Loads
-MongoClient = lambda *args, **kwargs: mock_client  # Overwrite globally before importing app
+# ✅ Overwrite MongoClient Before Importing FastAPI
+MongoClient = lambda *args, **kwargs: mock_client
 
-# ✅ Import FastAPI app after setting up mocks
+# ✅ Step 2: Import FastAPI app **after** setting up mocks
 from app.main import app
 
 @pytest.fixture
@@ -31,8 +31,9 @@ def client():
 
 @pytest.fixture(autouse=True)
 def override_dependencies(monkeypatch):
-    # ✅ 1. Ensure MongoDB is Mocked Globally
+    # ✅ 1. Ensure MongoDB is Mocked Before FastAPI Starts
     monkeypatch.setattr("pymongo.MongoClient", lambda *args, **kwargs: mock_client)
+    monkeypatch.setattr("app.main.MongoClient", lambda *args, **kwargs: mock_client)
 
     # ✅ 2. Mock Consul Registration (Prevent network calls)
     def mock_register_service_with_consul():
