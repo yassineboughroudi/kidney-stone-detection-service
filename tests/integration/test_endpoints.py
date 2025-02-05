@@ -34,48 +34,41 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo import MongoClient
 
+import pytest
+from unittest.mock import MagicMock
+from pymongo.collection import Collection
+from pymongo.database import Database
+from pymongo import MongoClient
+
 @pytest.fixture(autouse=True)
 def override_dependencies(monkeypatch):
-    # Mock the Consul registration to prevent errors during testing
+    # ✅ 1. Mock MongoDB Connection **Before FastAPI Starts**
+    mock_collection = MagicMock(spec=Collection)
+    mock_collection.insert_one.return_value = {"_id": "mock_id"}  # Mock insert result
+
+    mock_db = MagicMock(spec=Database)
+    mock_db.__getitem__.return_value = mock_collection  # Mock DB collections
+
+    mock_client = MagicMock(spec=MongoClient)
+    mock_client.__getitem__.return_value = mock_db  # Mock entire MongoDB client
+
+    monkeypatch.setattr("pymongo.MongoClient", lambda *args, **kwargs: mock_client)
+
+    # ✅ 2. Mock Consul Registration (Prevent network calls)
     def mock_register_service_with_consul():
         return
     monkeypatch.setattr("app.main.register_service_with_consul", mock_register_service_with_consul)
 
-    # Mock the external patient service call
+    # ✅ 3. Mock External Patient Service
     def dummy_get_patient_details(patient_id: str):
         return {"id": patient_id, "name": "John Doe"}
     monkeypatch.setattr("app.get_patient_details", dummy_get_patient_details)
 
-    # Mock the RabbitMQ event publisher
+    # ✅ 4. Mock RabbitMQ Event Publisher
     def dummy_publish_event(event: dict):
         return
     monkeypatch.setattr("app.publish_event", dummy_publish_event)
 
-    # Mock MongoDB Connection **BEFORE APP INITIALIZATION**
-    mock_collection = MagicMock(spec=Collection)
-    mock_collection.insert_one.return_value = {"_id": "mock_id"}
-
-    mock_db = MagicMock(spec=Database)
-    mock_db.__getitem__.return_value = mock_collection
-
-    mock_client = MagicMock(spec=MongoClient)
-    mock_client.__getitem__.return_value = mock_db
-
-    monkeypatch.setattr("app.main.MongoClient", lambda *args, **kwargs: mock_client)
-
-
-    # Mock the MongoDB collection and client
-    class MockCollection:
-        def insert_one(self, data):
-            return {"_id": "mock_id"}
-
-    class MockDBClient:
-        def __init__(self, uri):
-            pass
-        def __getitem__(self, name):
-            return MockCollection()
-
-    monkeypatch.setattr("pymongo.MongoClient", MockDBClient)
 
 
 def test_predict_endpoint_valid_image(client, monkeypatch):
