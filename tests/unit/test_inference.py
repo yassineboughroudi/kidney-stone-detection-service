@@ -2,9 +2,15 @@ import pytest
 from app.inference import predict
 from fastai.learner import load_learner
 
+import os
+import pytest
+from fastai.learner import load_learner
+
 @pytest.fixture
 def dummy_model():
-    return load_learner("../model/kidney_model.pkl")
+    # Use the absolute path for the model file
+    model_path = os.path.join(os.path.dirname(__file__), "../../model/kidney_model.pkl")
+    return load_learner(model_path)
 
 def test_predict_success(dummy_model):
     with open("../img/Kidney_stone_test.png", "rb") as f:
