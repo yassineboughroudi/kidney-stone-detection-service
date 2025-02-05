@@ -12,3 +12,8 @@ torchvision==0.17.1
 python-multipart==0.0.7
 spacy==3.7.4  # Pinned version with better ARM compatibility
 thinc==8.2.3   # Explicit version to match spacy
+pytest==8.3.4
+pytest-cov==4.1.0  # For test coverage
+pytest-mock==3.11.1  # For mocking
+
+
