@@ -21,15 +21,13 @@ jobs:
         with:
           python-version: '3.10'
 
-      # 3. Install dependencies & run tests (if any)
+      # 3. Install dependencies
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      # - name: Run tests
-      #   run: pytest  (if you have unit tests)
 
-      # 4. Log in to Docker Hub (or GHCR)
+      # 4. Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -37,10 +35,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      # 5. Build Docker image
+      # 5. Build Docker image (Force AMD64)
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/kidney-stone-service:${{ github.sha }} .
+          docker build --platform linux/amd64 -t ${{ secrets.DOCKERHUB_USERNAME }}/kidney-stone-service:${{ github.sha }} .
 
       # 6. Push Docker image
       - name: Push Docker Image
