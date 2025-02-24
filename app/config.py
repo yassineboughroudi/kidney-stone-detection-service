@@ -3,7 +3,7 @@ from decouple import config
 # Load service-related configurations
 SERVICE_NAME = config("SERVICE_NAME", default="kidney-stone-service")
 RABBITMQ_HOST = config("RABBITMQ_HOST", default="rabbitmq")  # Use Docker container name
-RABBITMQ_PORT = config("RABBITMQ_PORT", cast=int, default=15672)
+RABBITMQ_PORT = config("RABBITMQ_PORT", cast=int, default=5672)
 RABBITMQ_EXCHANGE = config("RABBITMQ_EXCHANGE", default="predictions")
 
 # MongoDB-related configurations
