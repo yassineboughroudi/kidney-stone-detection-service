@@ -60,7 +60,7 @@ async def startup_event():
 async def health_check():
     return {"status": "healthy"}
 
-# Import our helper function
+# Import our helper function for patient details
 from app.patient_validator import get_patient_details  # Adjust the module name/path as needed
 
 class PredictionResponse(BaseModel):
@@ -95,10 +95,38 @@ async def predict_kidney_stone(file: UploadFile = File(...), patient_id: Optiona
             "prediction": prediction_result,
         }
         result = predictions_collection.insert_one(prediction_data)
-        prediction_data["_id"] = str(result["_id"])
+        prediction_data["_id"] = str(result.inserted_id)
 
-        # Publish event via RabbitMQ
-        publish_event(prediction_data)
+        # Prepare and publish a custom notification if patient info is available
+        if patient_info is not None:
+            if prediction_result["class"] == "Kidney_stone":
+                subject = "Kidney Stone Detected - Urgent Attention Required"
+                message = (
+                    f"Dear {patient_info.get('firstName', 'Patient')} {patient_info.get('lastName', '')},\n\n"
+                    f"Your recent CT scan has detected kidney stones with a probability of "
+                    f"{prediction_result['probabilities']['Kidney_stone'] * 100:.2f}%.\n"
+                    "We recommend consulting your healthcare provider immediately for further evaluation and treatment.\n\n"
+                    "Best regards,\nKidney Stone Detection Team"
+                )
+            else:
+                subject = "CT Scan Result: No Kidney Stones Detected"
+                message = (
+                    f"Dear {patient_info.get('firstName', 'Patient')} {patient_info.get('lastName', '')},\n\n"
+                    "Your recent CT scan shows no evidence of kidney stones.\n"
+                    "No further action is required at this time.\n\n"
+                    "Best regards,\nKidney Stone Detection Team"
+                )
+
+            # Prepare the custom event payload with email information
+            event_data = {
+                "recipientEmail": patient_info["email"],
+                "subject": subject,
+                "message": message
+            }
+            publish_event(event_data)
+        else:
+            # Fallback: publish the basic prediction data if no patient info provided
+            publish_event(prediction_data)
 
         # Return enriched prediction response including any patient info retrieved
         return {
